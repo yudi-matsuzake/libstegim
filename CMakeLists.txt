@@ -20,8 +20,8 @@ target_include_directories(${PROJECT_NAME}
 	PRIVATE	${SOURCES_PATH})
 
 # flags
-target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:DEBUG>:-Wall -Wextra>")
-target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:RELEASE>:-Wall -Wextra -O3>")
+target_compile_options(${PROJECT_NAME}
+	PUBLIC -Wall -Wextra)
 
 # to cmake induce the c++ standard
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_range_for)

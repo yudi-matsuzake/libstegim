@@ -48,10 +48,24 @@ void test_grayscale(
 			exit(EXIT_FAILURE);
 		}
 
-		int n_pixel_modified = rand()%(cover.rows*cover.cols);
+		int max_bytes = (cover.rows*cover.cols)/CHAR_BIT + 1;
+		int n_pixel_modified = rand()%max_bytes;
 		std::vector<char> data = generate_data(n_pixel_modified);
 
+		std::vector<char> extracted_data;
+
 		stegim::lsb_embed(cover, stego, data);
+		stegim::lsb_extract(stego, extracted_data, 0, data.size());
+
+		if(data != extracted_data){
+			std::cout << "Embeded (" << data.size() << "): " << std::endl;
+			std::cout << data.data() << std::endl;
+			std::cout << "Extracted (" << data.size() << "): " << std::endl;
+			std::cout << extracted_data.data() << std::endl;
+			std::cerr << "Extracted data is different from embedded data!"
+				  << std::endl;
+			exit(EXIT_FAILURE);
+		}
 
 	}
 }
