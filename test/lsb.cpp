@@ -36,6 +36,7 @@ std::vector<char> generate_data(int n)
 void test_grayscale(
 	const std::vector<std::string>& image_path_list)
 {
+	bool first = true;
 	for( const std::string& f : image_path_list ){
 
 		std::cout << "Open the cover: " << f << std::endl;
@@ -55,7 +56,13 @@ void test_grayscale(
 		std::vector<char> extracted_data;
 
 		stegim::lsb_embed(cover, stego, data);
-		stegim::lsb_extract(stego, extracted_data, 0, data.size());
+		stegim::lsb_extract(stego, extracted_data, data.size());
+
+		if(first){
+			first = false;
+			cv::imwrite("lsb_cover.pgm", cover);
+			cv::imwrite("lsb_stego.pgm", stego);
+		}
 
 		if(data != extracted_data){
 			std::cout << "Embeded (" << data.size() << "): " << std::endl;
