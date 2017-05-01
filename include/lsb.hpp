@@ -40,7 +40,7 @@ public:
 		bool b = true,
 		bool g = true,
 		bool r = true,
-		bool a = true,
+		bool a = false,
 		int offset = 0);
 
 	virtual ~lsb_options();

@@ -39,49 +39,67 @@ inline uchar lsb_extract_pixel_little_endian(uchar pixel, uchar data, uchar ibit
 }
 
 /*
- * copy image beginning in a pixel offset
+ * copy image beginning in `begin` and ending in `end`
+ * range of pixels
  */
-void copy_mat_offset(cv::Mat& dst, const cv::Mat& src, int offset = 0)
+void copy_mat_range(
+	cv::Mat& dst,
+	const cv::Mat& src,
+	int begin = 0,
+	int end = 0)
 {
-	size_t rows = src.rows;
-	size_t cols = src.cols;
+
+	assert(begin < src.cols*src.rows*src.channels());
+	assert(end <= src.cols*src.rows*src.channels());
+
+	if(begin >= end)
+		end = src.cols*src.rows*src.channels();
 
 	/*
 	 * calculate the i, j inicial position
 	 */
-	size_t i_ini = offset/src.cols;
-	size_t j_ini = offset%src.cols;
+	size_t i_ini = begin/src.cols;
+	size_t j_ini = begin%src.cols;
 
-	if(src.isContinuous()){
+	int rows = src.rows;
+	int cols = src.cols;
+	 
+	if(src.isContinuous())
+	{
 		cols *= rows;
 		rows = 1;
 		i_ini = 0;
-		j_ini = offset;
+		j_ini = begin;
 	}
 
-	for(size_t i=i_ini; i<rows; i++){
-		uchar* ptr_dst = dst.ptr<uchar>(i);
-		const uchar* ptr_src = src.ptr<uchar>(i);
+	int n_uc_to_copy = end - begin;
 
-		for(size_t j=j_ini; j<cols; j++){
+	for(int i = i_ini, uc_count = 0; i < rows && uc_count < n_uc_to_copy; i++){
+		const uchar* ptr_src = src.ptr<uchar>(i);
+		uchar* ptr_dst = dst.ptr<uchar>(i);
+
+		for (int j = j_ini; j < cols && uc_count < n_uc_to_copy; j++){
 			/*
 			 * reset j_ini
 			 */
 			if(j_ini > 0){
-				ptr_src += j_ini;
-				ptr_dst += j_ini;
+				ptr_src += j_ini*src.channels();
+				ptr_dst += j_ini*dst.channels();
 				j_ini = 0;
 			}
 
+			for(	int c = 0;
+				c < src.channels();
+				c++){
 
-			for(int c=0; c < src.channels(); c++){
 				*ptr_dst = *ptr_src;
+
 				ptr_dst++;
 				ptr_src++;
 			}
+			uc_count++;
 		}
 	}
-
 }
 
 /*
@@ -96,6 +114,9 @@ void lsb_embed_single_channel(
 	size_t rows = cover.rows;
 	size_t cols = cover.cols;
 	int offset = lsb_opt.get_offset();
+
+	if(offset)
+		copy_mat_range(stego, cover, 0, offset);
 
 	/*
 	 * calculate the i, j inicial position
@@ -142,13 +163,14 @@ void lsb_embed_single_channel(
 			n_bytes = n_bits/CHAR_BIT;
 			ptr_cover += cover.channels();
 			ptr_stego += stego.channels();
+
 		}
 	}
 
 	/*
-	 * we can use the n_bits count to the rest of the image
+	 * we can use the offset+n_bits count to the rest of the image
 	 */
-	copy_mat_offset(stego, cover, n_bits);
+	copy_mat_range(stego, cover, offset+n_bits);
 }
 
 /*
@@ -164,6 +186,9 @@ void lsb_embed_multiple_channel(
 	size_t cols = cover.cols;
 
 	int offset = lsb_opt.get_offset();
+
+	if(offset)
+		copy_mat_range(stego, cover, 0, offset);
 
 	/*
 	 * calculate the i, j inicial position
@@ -187,8 +212,8 @@ void lsb_embed_multiple_channel(
 	embed_channel.push_back(lsb_opt.get_r());
 	embed_channel.push_back(lsb_opt.get_a());
 
-	size_t n_bits = 0;
-	for(	size_t i = i_ini, n_bytes = 0;
+	size_t n_pixel = 0;
+	for(	size_t i = i_ini, n_bytes = 0, n_bits = 0;
 		i < rows && n_bytes < data.size();
 		i++){
 
@@ -202,42 +227,44 @@ void lsb_embed_multiple_channel(
 			 * reset j_ini
 			 */
 			if(j_ini > 0){
-				ptr_cover += j_ini;
-				ptr_stego += j_ini;
+				ptr_cover += j_ini*cover.channels();
+				ptr_stego += j_ini*stego.channels();
 				j_ini = 0;
 			}
 
-			for(int c = 0; c < cover.channels(); c++){
+			for(int c = 0; c < cover.channels() && n_bytes < data.size(); c++){
 
 				/*
 				 * if embeds in this channel
 				 */
 				if(embed_channel[c]){
 
-
 					/*
 					 * embedding
 					 */
-					*ptr_stego = lsb_embed_pixel_little_endian(
-							*ptr_cover,
+					ptr_stego[c] = lsb_embed_pixel_little_endian(
+							ptr_cover[c],
 							data[n_bytes],
 							n_bits%CHAR_BIT);
-
 
 					n_bits++;
 					n_bytes = n_bits/CHAR_BIT;
 
-					ptr_cover++;
-					ptr_stego++;
+				}else{
+					ptr_stego[c] = ptr_cover[c];
 				}
 			}
+
+			n_pixel++;
+			ptr_cover += cover.channels();
+			ptr_stego += stego.channels();
 		}
 	}
 
 	/*
-	 * we can use the n_bits count to the rest of the image
+	 * we can use the offset+n_bits count to the rest of the image
 	 */
-	copy_mat_offset(stego, cover, n_bits);
+	copy_mat_range(stego, cover, offset+n_pixel);
 }
 
 /*
@@ -278,7 +305,7 @@ void lsb_extract_single_channel(
 
 	data.resize(max_bytes, 0);
 
-	for(	size_t i = i_ini, n_bytes = 0, n_bits = 0;
+	for(	size_t i = i_ini, n_bits = 0, n_bytes = 0;
 		i < rows && n_bytes < max_bytes;
 		i++){
 
@@ -306,8 +333,10 @@ void lsb_extract_single_channel(
 			n_bits++;
 			n_bytes = n_bits/CHAR_BIT;
 			ptr_stego += stego.channels();
+
 		}
 	}
+
 }
 
 /*
@@ -369,10 +398,9 @@ void lsb_extract_multiple_channel(
 			 * reset j_ini
 			 */
 			if(j_ini > 0){
-				ptr_stego += j_ini;
+				ptr_stego += j_ini*stego.channels();
 				j_ini = 0;
 			}
-
 
 			for(int c = 0; c < stego.channels(); c++){
 
@@ -384,16 +412,16 @@ void lsb_extract_multiple_channel(
 					 * extracting
 					 */
 					data[n_bytes] = lsb_extract_pixel_little_endian(
-								*ptr_stego,
+								ptr_stego[c],
 								data[n_bytes],
 								n_bits%CHAR_BIT);
 
 					n_bits++;
 					n_bytes = n_bits/CHAR_BIT;
-					ptr_stego++;
 				}
 			}
 
+			ptr_stego += stego.channels();
 		}
 	}
 }

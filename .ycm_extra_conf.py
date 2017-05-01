@@ -43,7 +43,6 @@ flags = [
 '-Wno-long-long',
 '-Wno-variadic-macros',
 '-fexceptions',
-'-DNDEBUG',
 '-Ilibyub-cv/headers',
 '-Llibyub-cv',
 '-lyub-cv',
