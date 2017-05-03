@@ -62,12 +62,12 @@ private:
 	int offset;
 };
 
-/** Perform a naive lsb algorithm.
+/** Perform a naive lsb replacement algorithm.
   * TODO: A more detailed description of lsb.
   *
-  * @param cover	The cover image. Must be CV_8UC{1,3,4} type.
-  * @param stego	The stego image buffer. Must be CV_8UC{1,3,4} type.
-  * @param data		Vector for embedding the data
+  * @param cover	The cover image. Must be CV_8UC{1,3,4} type
+  * @param stego	The stego image buffer. Must be CV_8UC{1,3,4} type
+  * @param data		Data to be embedded in `cover`
   * @param lsb_opt	Optional arguments of lsb_embed
   *
   * @see lsb_options
@@ -79,13 +79,15 @@ void lsb_embed (
 	const lsb_options& lsb_opt = lsb_options());
 
 /** Extract the embedded data from `stego` and write it on `data`
-  * vector.
+  * vector using a naive lsb replacement algorithm.
   * TODO: A more detailed description of lsb_extract.
   *
   * @param stego	Image containing the embed data.
   * @param data		Vector to return the data on
   * @param size		The size of the message embedded in bytes
   * @param lsb_opt	Optional arguments of lsb_extract
+  *
+  * @see lsb_embed
   */
 void lsb_extract (
 	const cv::Mat& stego,

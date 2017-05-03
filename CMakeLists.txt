@@ -34,3 +34,4 @@ add_subdirectory(test)
 
 enable_testing()
 add_test (NAME lsb COMMAND lsb)
+add_test (NAME lsbm COMMAND lsbm)
