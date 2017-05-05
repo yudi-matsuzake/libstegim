@@ -153,10 +153,12 @@ std::vector<lsbm_pair> lsbm_pair_shuffled(
 	return v;
 }
 
-void lsb_maching_embed_single_channel(
-	const cv::Mat& cover,
-	cv::Mat& stego,
-	const std::vector<char>& data,
+/*
+ * deviate a sequence of image positions based on `key`
+ */
+std::vector<lsbm_pair> lsbm_deviate_pair_list(
+	int rows,
+	int cols,
 	const std::vector<char>& key)
 {
 	int64_t hash_seed = prime_hash(key.data(), key.size());
@@ -172,10 +174,29 @@ void lsb_maching_embed_single_channel(
 	std::uniform_int_distribution<int> uniform;
 
 	std::vector<lsbm_pair> pair = lsbm_pair_shuffled(
-		cover.rows,
-		cover.cols,
+		rows,
+		cols,
 		random_generator,
 		uniform);
+
+	return pair;
+}
+
+/*
+ * embeds the `data` in `stego` using the `cover` image
+ * and the key `key` using one channel.
+ */
+void lsb_matching_embed_data(
+	const cv::Mat& cover,
+	cv::Mat& stego,
+	const std::vector<char>& data,
+	const std::vector<char>& key)
+{
+
+	std::vector<lsbm_pair> pair = lsbm_deviate_pair_list(
+					cover.rows,
+					cover.cols * cover.channels(),
+					key);
 
 	size_t n_bytes = 0;
 	size_t i = 0;
@@ -216,29 +237,19 @@ void lsb_maching_embed_single_channel(
 	}
 }
 
-void lsb_matching_extract_single_channel(
+/*
+ * extracts the embedded data from stego
+ */
+void lsb_matching_extract_embedded_data(
 	const cv::Mat& stego,
 	std::vector<char>& data,
 	size_t size,
 	const std::vector<char>& key)
 {
-	int64_t hash_seed = prime_hash(key.data(), key.size());
-
-	/*
-	 * default random generator
-	 */
-	std::default_random_engine random_generator(hash_seed);
-
-	/*
-	 * default random distribution
-	 */
-	std::uniform_int_distribution<int> uniform;
-
-	std::vector<lsbm_pair> pair = lsbm_pair_shuffled(
-		stego.rows,
-		stego.cols,
-		random_generator,
-		uniform);
+	std::vector<lsbm_pair> pair = lsbm_deviate_pair_list(
+					stego.rows,
+					stego.cols * stego.channels(),
+					key);
 
 	size_t i = 0;
 	size_t n_bytes = 0;
@@ -277,16 +288,7 @@ void stegim::lsb_matching_embed(
 	assert(cover.cols && cover.rows);
 	stego.create(cover.size(), cover.type());
 
-	/*
-	 * Separation of the lsb_embed in single_channel and multiple_channel
-	 * is just for optimization in the comparison number for single channel.
-	 * Maybe there is a more elegant way to do this, with the same result.
-	 */
-	if(cover.type() == CV_8UC1){
-		lsb_maching_embed_single_channel(cover, stego, data, key);
-	}else{
-		assert(0);
-	}
+	lsb_matching_embed_data(cover, stego, data, key);
 }
 
 void stegim::lsb_matching_embed(
@@ -314,16 +316,7 @@ void stegim::lsb_matching_extract(
 	data.clear();
 	data.resize(size);
 
-	/*
-	 * Separate the lsb_extract in single_channel and multiple_channel
-	 * just for optimization in the comparison number for single channel.
-	 * Maybe there is a more elegant way to do this, with the same result.
-	 */
-	if(stego.type() == CV_8UC1){
-		lsb_matching_extract_single_channel(stego, data, size, key);
-	}else{
-		assert(0);
-	}
+	lsb_matching_extract_embedded_data(stego, data, size, key);
 }
 
 void stegim::lsb_matching_extract(

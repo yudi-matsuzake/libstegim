@@ -30,12 +30,15 @@ std::vector<char> generate_data(int n)
 	return v;
 }
 
-void test_grayscale(std::vector<std::string>& image_path_list)
+void test(
+	std::vector<std::string>& image_path_list,
+	int flags = CV_LOAD_IMAGE_GRAYSCALE,
+	std::string ext = "pgm")
 {
 	size_t n_img = 0;
 	for(std::string& path : image_path_list){
 		std::cout << "File: " << path << std::endl;
-		cv::Mat cover = cv::imread(path, CV_LOAD_IMAGE_GRAYSCALE);
+		cv::Mat cover = cv::imread(path, flags);
 		cv::Mat stego;
 
 		size_t max_bytes = (cover.rows*cover.cols)/CHAR_BIT;
@@ -54,8 +57,8 @@ void test_grayscale(std::vector<std::string>& image_path_list)
 			std::stringstream fstego;
 
 
-			fcover << n_img << "_lsbm_cover.pgm";
-			fstego << n_img << "_lsbm_stego.pgm";
+			fcover << n_img << "_lsbm_cover." << ext;
+			fstego << n_img << "_lsbm_stego." << ext;
 
 			cv::imwrite(fcover.str(), cover);
 			cv::imwrite(fstego.str(), stego);
@@ -75,9 +78,13 @@ int main()
 
 	std::string cover_image_path(COVER_IMAGE_PATH);
 	std::string img_path = cover_image_path;
-	std::vector<std::string> image_path_list = glob(img_path + "/*.pgm");
+	std::vector<std::string> gray_image_list = glob(img_path + "/*.pgm");
+	std::vector<std::string> color_image_list = glob(img_path + "/*.ppm");
 
-	test_grayscale(image_path_list);
+	std::cout << "GRAYSCALE-----" << std::endl;
+	test(gray_image_list);
+	std::cout << "COLOR---------" << std::endl;
+	test(color_image_list, CV_LOAD_IMAGE_COLOR, "ppm");
 
 	return 0;
 }
