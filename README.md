@@ -21,7 +21,7 @@ make
 
 ## Testing and examples
 
-To make sure the compilation went well, you may run the test examples in `stegim/test`
+To make sure the compilation went well, you may run the test examples:
 
 ```shell
 cd build
